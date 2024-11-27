@@ -1,7 +1,7 @@
 module METTS
 
 using ITensors
-using ITensorTDVP
+using ITensorMPS
 
 export prune_analysis, prune, timeevo_tdvp, timeevo_tdvp_extend, collapse!, collapse_with_qn!,
     entropy_von_neumann
