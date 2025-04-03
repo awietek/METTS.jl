@@ -5,6 +5,7 @@ function n_steps_remainder(time::Number, tau::Real)
     n_steps = floor(abs(time) / tau)
     time_tau = n_steps * tau * time / abs(time)
     remainder = time - time_tau
+    @show n_steps
     return n_steps, remainder, time_tau
 end
 
@@ -37,7 +38,12 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
     n_steps, remainder, time_tau = n_steps_remainder(time, tau)
     psi = copy(psi0)
 
-    for step in 1:n_steps        
+    
+    norm_meet = zeros(Int(n_steps+1))
+    
+    entanglement_meet = zeros(Int(n_steps+1))
+
+    for (k,step) in enumerate(1:n_steps)        
         if maxlinkdim(psi) < maxm
             t = @elapsed begin
                 # psi = tdvp(H, psi, time_tau / n_steps;
@@ -85,7 +91,10 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
             end
         end
 
-        
+        @show step
+        norm_meet[k] = norm(psi)
+        entanglement_meet[k] = svn
+
         GC.gc()
 
     end
@@ -137,8 +146,10 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
 
         GC.gc()
     end
+    norm_meet[Int(n_steps+1)] = norm(psi)
+    entanglement_meet[Int(n_steps+1)] = svn
     
-    return psi
+    return psi,norm_meet,entanglement_meet
 end
 
 
@@ -153,7 +164,7 @@ function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
                              tau::Number=0.1, cutoff::Float64=1e-6,
                              maxm::Int64=1000, tau0::Float64=0.05,
                              nsubdiv::Int64=4, kkrylov::Int64=3,
-                             normalize::Bool=true, silent=false,
+                             normalize::Bool=false, silent=false,
                              solver_backend::AbstractString="applyexp",
                              shift::Real = 0.)
 
@@ -210,10 +221,10 @@ function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
     
     # Perform the bulk time evolution
     time_bulk = time - time_init
-    psi = timeevo_tdvp(H, psi, time_bulk; tau=tau, cutoff=cutoff, maxm=maxm,
+
+    psi,norm_meet,entanglement_meet = timeevo_tdvp(H, psi, time_bulk; tau=tau, cutoff=cutoff, maxm=maxm,
                         normalize=normalize, silent=silent,
                         solver_backend=solver_backend, shift=shift)   
 
-
-    return psi
+    return psi,norm_meet,entanglement_meet
 end
