@@ -38,7 +38,9 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
     n_steps, remainder, time_tau = n_steps_remainder(time, tau)
     psi = copy(psi0)
 
-
+    if ee_cut == 1
+        ee_cut = N ÷ 2
+    end
 
 
     norm_meet = zeros(Int(n_steps + 1))
@@ -170,8 +172,6 @@ function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
     shift::Real=0.0)
 
 
-
-
     N = length(psi0)
     tau_init = min(tau0, abs(time))
     time_init = time / abs(time) * tau_init
@@ -214,7 +214,7 @@ function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
                 nsite=1,
                 cutoff=cutoff,
                 maxdim=maxm,
-                normalize=normalize, ee_cut=ee_cut)
+                normalize=normalize)
         end
 
         svn = entropy_von_neumann(psi, ee_cut)
