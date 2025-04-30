@@ -33,6 +33,7 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
     maxm::Int64=1000, normalize::Bool=true,
     silent=false, solver_backend::AbstractString="applyexp", ee_cut::Int=1,
     shift::Real=0.0)
+
     N = length(psi0)
     n_steps, remainder, time_tau = n_steps_remainder(time, tau)
     psi = copy(psi0)
@@ -231,7 +232,7 @@ function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
 
     psi, norm_meet, entanglement_meet = timeevo_tdvp(H, psi, time_bulk; tau=tau, cutoff=cutoff, maxm=maxm,
         normalize=normalize, silent=silent,
-        solver_backend=solver_backend, shift=shift)
+        solver_backend=solver_backend,ee_cut=ee_cut, shift=shift)
 
     return psi, norm_meet, entanglement_meet
 end
