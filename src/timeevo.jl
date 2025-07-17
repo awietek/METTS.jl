@@ -10,12 +10,12 @@ end
 
 function entropy_von_neumann(psi::MPS, b::Int)
     nrm = norm(psi)
-    s = siteinds(psi)
+    s = siteinds(psi)  
     orthogonalize!(psi, b)
-    _, S = svd(psi[b], (linkind(psi, b - 1), s[b]))
+    _,S = svd(psi[b], (linkind(psi, b-1), s[b]))
     SvN = 0.0
     for n in 1:dim(S, 1)
-        p = (S[n, n] / nrm)^2
+        p = (S[n,n] / nrm)^2
         SvN -= p * log(p)
     end
     return SvN
@@ -29,25 +29,15 @@ then it switches to 1TDVP
 a commensurate step size is automatically chosen
 """
 function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
-    tau::Number=0.1, cutoff::Float64=1e-6,
-    maxm::Int64=1000, normalize::Bool=true,
-    silent=false, solver_backend::AbstractString="applyexp", ee_cut::Int=1,
-    shift::Real=0.0)
-
+                      tau::Number=0.1, cutoff::Float64=1e-6,
+                      maxm::Int64=1000, normalize::Bool=true,
+                      silent=false, solver_backend::AbstractString="applyexp",
+                      shift::Real = 0.)
     N = length(psi0)
     n_steps, remainder, time_tau = n_steps_remainder(time, tau)
     psi = copy(psi0)
 
-    if ee_cut == 1
-        ee_cut = N ÷ 2
-    end
-
-
-    norm_meet = zeros(Int(n_steps + 1))
-
-    entanglement_meet = zeros(Int(n_steps + 1))
-
-    for (k, step) in enumerate(1:n_steps)
+    for step in 1:n_steps        
         if maxlinkdim(psi) < maxm
             t = @elapsed begin
                 # psi = tdvp(H, psi, time_tau / n_steps;
@@ -56,20 +46,20 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
                 #            solver_backend=solver_backend, shift=shift)
 
                 psi = tdvp(H, time_tau / n_steps, psi;
-                    updater_backend=solver_backend,
-                    nsweeps=1,
-                    nsite=2,
-                    cutoff=cutoff,
-                    maxdim=maxm,
-                    normalize=normalize)
+                           updater_backend=solver_backend,
+                           nsweeps=1,
+                           nsite=2,
+                           cutoff=cutoff,
+                           maxdim=maxm,
+                           normalize=normalize)
 
             end
 
-            svn = entropy_von_neumann(psi, ee_cut)
+            svn = entropy_von_neumann(psi, N ÷ 2)
             linkdim = maxlinkdim(psi)
             if !silent
                 @printf("    2TDVP sweep, tau: %.5f, SvN: %.4f, maxm: %6d, time: %.5f secs\n",
-                    tau, svn, linkdim, t)
+                        tau, svn, linkdim, t)
                 flush(stdout)
             end
         else
@@ -79,25 +69,23 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
                 #            maxdim=maxm, normalize=normalize,
                 #            solver_backend=solver_backend, shift=shift)
                 psi = tdvp(H, time_tau / n_steps, psi;
-                    updater_backend=solver_backend,
-                    nsweeps=1,
-                    nsite=1,
-                    cutoff=cutoff,
-                    maxdim=maxm,
-                    normalize=normalize)
+                           updater_backend=solver_backend,
+                           nsweeps=1,
+                           nsite=1,
+                           cutoff=cutoff,
+                           maxdim=maxm,
+                           normalize=normalize)
             end
-            svn = entropy_von_neumann(psi, ee_cut)
+            svn = entropy_von_neumann(psi, N ÷ 2)
             linkdim = maxlinkdim(psi)
             if !silent
                 @printf("    1TDVP sweep, tau: %.5f, SvN: %.4f, maxm: %6d, time: %.5f secs\n",
-                    tau, svn, linkdim, t)
+                        tau, svn, linkdim, t)
                 flush(stdout)
             end
         end
 
-        norm_meet[k] = norm(psi)
-        entanglement_meet[k] = svn
-
+        
         GC.gc()
 
     end
@@ -110,18 +98,18 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
                 #            solver_backend=solver_backend, shift=shift)
 
                 psi = tdvp(H, remainder, psi;
-                    updater_backend=solver_backend,
-                    nsweeps=1,
-                    nsite=2,
-                    cutoff=cutoff,
-                    maxdim=maxm,
-                    normalize=normalize)
+                           updater_backend=solver_backend,
+                           nsweeps=1,
+                           nsite=2,
+                           cutoff=cutoff,
+                           maxdim=maxm,
+                           normalize=normalize)
             end
-            svn = entropy_von_neumann(psi, ee_cut)
+            svn = entropy_von_neumann(psi, N ÷ 2)
             linkdim = maxlinkdim(psi)
             if !silent
                 @printf("    2TDVP sweep, tau: %.5f, SvN: %.4f, maxm: %6d, time: %.5f secs\n",
-                    abs(remainder), svn, linkdim, t)
+                        abs(remainder), svn, linkdim, t)
                 flush(stdout)
             end
         else
@@ -130,29 +118,26 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
                 #            nsweeps=1, nsite=1, cutoff=cutoff,
                 #            maxdim=maxm, normalize=normalize,
                 #            solver_backend=solver_backend, shift=shift)
-
-
+                
                 psi = tdvp(H, remainder, psi;
-                    updater_backend=solver_backend,
-                    nsweeps=1,
-                    nsite=1,
-                    cutoff=cutoff,
-                    maxdim=maxm,
-                    normalize=normalize)
+                           updater_backend=solver_backend,
+                           nsweeps=1,
+                           nsite=1,
+                           cutoff=cutoff,
+                           maxdim=maxm,
+                           normalize=normalize)
             end
             if !silent
                 @printf("    1TDVP sweep, tau: %.5f, SvN: %.4f, maxm: %6d, time: %.5f secs\n",
-                    abs(remainder), svn, linkdim, t)
+                        abs(remainder), svn, linkdim, t)
                 flush(stdout)
             end
         end
 
         GC.gc()
     end
-    norm_meet[Int(n_steps + 1)] = norm(psi)
-    entanglement_meet[Int(n_steps + 1)] = svn
-
-    return psi, norm_meet, entanglement_meet
+    
+    return psi
 end
 
 
@@ -164,26 +149,21 @@ then it switches to 1TDVP
 a commensurate step size is automatically chosen
 """
 function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
-    tau::Number=0.1, cutoff::Float64=1e-6,
-    maxm::Int64=1000, tau0::Float64=0.05,
-    nsubdiv::Int64=4, kkrylov::Int64=3,
-    normalize::Bool=false, silent=false,
-    solver_backend::AbstractString="applyexp", ee_cut::Int=1,
-    shift::Real=0.0)
-
+                             tau::Number=0.1, cutoff::Float64=1e-6,
+                             maxm::Int64=1000, tau0::Float64=0.05,
+                             nsubdiv::Int64=4, kkrylov::Int64=3,
+                             normalize::Bool=true, silent=false,
+                             solver_backend::AbstractString="applyexp",
+                             shift::Real = 0.)
 
     N = length(psi0)
     tau_init = min(tau0, abs(time))
     time_init = time / abs(time) * tau_init
 
-    if ee_cut == 1
-        ee_cut = N ÷ 2
-    end
-
     # distribute intial times logarithmically
-    times_init = [time_init / (2^(nsubdiv - 1))]
+    times_init = [time_init / (2 ^ (nsubdiv - 1))]
     for exp in (nsubdiv-1):-1:1
-        append!(times_init, time_init / (2^exp))
+        append!(times_init, time_init / (2 ^ exp))
     end
 
     psi = copy(psi0)
@@ -194,13 +174,13 @@ function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
             println("before basis_extend")
             flush(stdout)
             psi = basis_extend(psi, H; extension_krylovdim=kkrylov,
-                extension_cutoff=1e-12)
+                               extension_cutoff=1e-12)
             println("after basis_extend")
             flush(stdout)
         end
         l2 = maxlinkdim(psi)
         if !silent
-            @printf("    Basis extension, maxm: %4d -> %4d, time: %.5f secs\n",
+        @printf("    Basis extension, maxm: %4d -> %4d, time: %.5f secs\n",
                 l1, l2, t)
         end
         t = @elapsed begin
@@ -209,30 +189,30 @@ function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
             #            maxdim=maxm, normalize=normalize,
             #            solver_backend=solver_backend, shift=shift)
             psi = tdvp(H, times_init[isub], psi;
-                updater_backend=solver_backend,
-                nsweeps=1,
-                nsite=1,
-                cutoff=cutoff,
-                maxdim=maxm,
-                normalize=normalize)
+                       updater_backend=solver_backend,
+                       nsweeps=1,
+                       nsite=1,
+                       cutoff=cutoff,
+                       maxdim=maxm,
+                       normalize=normalize)
         end
 
-        svn = entropy_von_neumann(psi, ee_cut)
+        svn = entropy_von_neumann(psi, N ÷ 2)
         linkdim = maxlinkdim(psi)
         if !silent
             @printf("    1TDVP sweep, tau: %.5f, SvN: %.4f, maxm: %6d, time: %.5f secs\n",
-                abs(times_init[isub]), svn, linkdim, t)
+                    abs(times_init[isub]), svn, linkdim, t)
             flush(stdout)
         end
     end
     GC.gc()
-
+    
     # Perform the bulk time evolution
     time_bulk = time - time_init
+    psi = timeevo_tdvp(H, psi, time_bulk; tau=tau, cutoff=cutoff, maxm=maxm,
+                        normalize=normalize, silent=silent,
+                        solver_backend=solver_backend, shift=shift)   
 
-    psi, norm_meet, entanglement_meet = timeevo_tdvp(H, psi, time_bulk; tau=tau, cutoff=cutoff, maxm=maxm,
-        normalize=normalize, silent=silent,
-        solver_backend=solver_backend,ee_cut=ee_cut, shift=shift)
 
-    return psi, norm_meet, entanglement_meet
+    return psi
 end
