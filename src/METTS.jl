@@ -1,7 +1,7 @@
 module METTS
 using LinearAlgebra
 using ITensors
-using ITensorTDVP
+using ITensorMPS
 
 export timeevo_tdvp, timeevo_tdvp_extend, collapse!, collapse_with_qn!, entropy_von_neumann, n_steps_remainder
 
