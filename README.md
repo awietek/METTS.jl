@@ -1,145 +1,119 @@
-METTS.jl — Quick Guide and Example (Fermi–Hubbard on a cylinder)
-================================================================
+# METTS.jl — Quick Guide & Example (Fermi–Hubbard on a Cylinder)
 
 This repository contains a minimal, reproducible example for running
-METTS (Minimally Entangled Typical Thermal States) with ITensors.jl
+**METTS** (Minimally Entangled Typical Thermal States) with **ITensors**
 on the 2D Fermi–Hubbard model wrapped as a cylinder. The example
-computes finite-temperature observables and writes results to HDF5.
+computes finite‑temperature observables and writes results to HDF5.
 
-Contents
---------
-- examples/hubbard_cylinder_metts.jl  <-- runnable example script
-- outfiles.metts/                     <-- outputs will be written here (created at runtime)
-- src/         <-- package code and tests
+---
 
-Requirements
-------------
-- Julia 1.11 or newer
-- Packages (installed into THIS project):
-    ITensors
-    ITensorMPS
-    HDF5
+## Contents
 
-Note: you do NOT add METTS from the registry here because you are already
-inside the METTS repo. Activating this project makes `using METTS` work.
+```
+examples/hubbard_cylinder_metts.jl   <-- runnable example script
+src/                                <-- package code
+outfiles.metts/                     <-- created at runtime; outputs written here
+```
 
-Quick Start (5 minutes)
------------------------
-1) Open a terminal and go to the repo root:
-   cd /path/to/METTS.jl
+---
 
-2) Install dependencies into this project environment:
-   julia --project -e 'using Pkg; Pkg.instantiate();
-                       Pkg.add(["ITensors","ITensorMPS","HDF5"])'
+## Requirements
 
-3) Run the example (small test case):
-   julia --project examples/hubbard_cylinder_metts.jl \
-     24 4 10.0 0.9375 1.0 0.10 0.3 2000 1 100 5
+- Julia **1.11** or newer
+- Packages installed into **this** project: `ITensors`, `ITensorMPS`, `HDF5`
 
-   Arguments are positional:
-     L W U filling t T tau maxD seed nmetts Nwarm
+> **Note:** Do **not** add `METTS` from the registry when working inside this repo.
+> Activating this project makes `using METTS` work.
 
-4) Check that outputs were written:
-   find outfiles.metts -name outfile.h5 -maxdepth 8
+---
 
-   You should see a path like:
-   outfiles.metts/L.24.W.4/U.10.000/filling.0.93750/T.0.10000/D.2000/tau.0.30.seed.1/outfile.h5
-   The same folder will also contain samples.txt
+## Quick Start
 
-What the example does
----------------------
-- Builds the Fermi–Hubbard Hamiltonian on an L x W cylindrical square lattice
-- Optional short DMRG warmup to get a reasonable initial state
-- METTS iterations:
-  - imaginary-time evolve by beta/2 using TDVP
-  - measure standard observables
-  - collapse to a product state in a chosen basis
-  - repeat
+```bash
+# 1) Enter the project
+cd /path/to/METTS.jl
 
-Inputs (command-line arguments)
--------------------------------
-L         Integer   lattice length along x (sites = L*W)
-W         Integer   lattice width along y (cylinder)
-U         Float64   on-site interaction
-filling   Float64   electrons per site (e.g. 0.9375)
-t         Float64   nearest-neighbor hopping (usually 1.0)
-T         Float64   temperature (beta = 1/T)
-tau       Float64   TDVP time step for imaginary time evolution
-maxD      Int       max MPS bond dimension during time evolution
-seed      Int       RNG seed
-nmetts    Int       total number of METTS iterations
-Nwarm     Int       number of warm-up iterations (no measurements stored)
+# 2) Instantiate and add required packages *into this project*
+julia --project -e 'using Pkg; Pkg.instantiate(); Pkg.add(["ITensors","ITensorMPS","HDF5"])'
 
-Output files and layout
------------------------
-Base output directory is:
-  - METTS_OUTDIR if the environment variable is set, else
-  - ./outfiles.metts relative to the current working directory
+# 3) Run an example (L W U filling t T tau maxD seed nmetts Nwarm)
+julia --project examples/hubbard_cylinder_metts.jl   24 4 10.0 0.9375 1.0 0.10 0.3 2000 1 100 5
 
-Within that directory, runs are organized by parameters:
-  outfiles.metts/L.<L>.W.<W>/U.<U>/filling.<filling>/T.<T>/D.<maxD>/\
-  tau.<tau>.seed.<seed>/
+# 4) Find produced HDF5 outputs
+find outfiles.metts -maxdepth 8 -name outfile.h5
+```
 
-Each run directory contains:
-- outfile.h5
-    meta/...
-      Scalars recording L, W, U, filling, t, T, tau, maxD, seed, Nwarm
-    step_000011/...
-      energy         Float64
-      Ntotal         Vector{Float64} length N
-      DO             Vector{Float64} (double occupancy per site)
-      SZSZ           Matrix{Float64} N x N
-      SPSM           Matrix{Float64} N x N
-      SMSP           Matrix{Float64} N x N
-      NtotNtot       Matrix{Float64} N x N
-      SS             Matrix{Float64} N x N
+---
 
-    A new group step_<index> is appended for every measured iteration
-    (i.e. for steps > Nwarm).
+## Arguments
 
-- samples.txt
-    Text file with one collapsed product-basis sample per measured step:
-      <step>: [state codes]
-    The state codes are integers 1..4 mapped in the script to
-    "Emp", "Up", "Dn", "UpDn".
+| Argument | Meaning |
+|---|---|
+| `L` | Lattice length (total sites = `L × W`) |
+| `W` | Lattice width (cylinder) |
+| `U` | On‑site interaction |
+| `filling` | Electrons per site (e.g. `0.9375`) |
+| `t` | Nearest‑neighbor hopping (usually `1.0`) |
+| `T` | Temperature (`β = 1/T`) |
+| `tau` | TDVP step for imaginary‑time evolution |
+| `maxD` | Maximum MPS bond dimension |
+| `seed` | RNG seed |
+| `nmetts` | Total METTS iterations |
+| `Nwarm` | Warm‑up iterations (not stored) |
 
-Resuming a run
---------------
-The script auto-detects samples.txt. If present, it will:
-- reconstruct the initial product state from the last saved sample
-- skip the DMRG warmup
-- continue METTS iterations, appending new step groups to outfile.h5
-  and new rows to samples.txt
+**Notes**
 
-Minimal examples
-----------------
-Small sanity run:
-  julia --project examples/hubbard_cylinder_metts.jl 4 4 10.0 0.9375 1.0 0.10 0.3 100 1 10 5
+- Measurements are written only *after* warm‑up.
+- Ensure `nmetts > Nwarm`.
 
-Bigger run template to get results in the paper (we reject about N warm samples initially; higher tempertuares require larger Nwarm; 
-we also run 5 parallel seeds and average over them for each temperature):
-  julia --project examples/hubbard_cylinder_metts.jl 32 4 10.0 0.9375 1.0 0.10 0.2 2000 1 2000 100
+---
 
-Notes:
-- Measurements are stored only after warm-up. Ensure nmetts > Nwarm.
+## Outputs
 
-Troubleshooting
----------------
-- ERROR: Package ITensors not found
-  You are not in the project environment. Always run with:
-    julia --project examples/...
-  or add to the top of the script:
-    import Pkg; Pkg.activate(joinpath(@__DIR__, "..")); Pkg.instantiate()
-  and then run:
-    julia examples/...
+**Default output root:** `./outfiles.metts` (or the directory set by `METTS_OUTDIR`).
 
-- No measured data appears
-  Check that nmetts > Nwarm. Warm-up iterations do not write outputs.
+Each run is saved under:
+```
+outfiles.metts/L.<L>.W.<W>/U.<U>/filling.<f>/T.<T>/D.<maxD>/tau.<tau>.seed.<seed>/
+```
 
-- Slow or memory-heavy evolution
-  Decrease maxD or increase tau slightly (with care)
-  
-Performance tips
-----------------
-- Start with a short DMRG warmup to avoid very long initial transients.
-- Choose tau and maxD to balance accuracy and runtime. Typical tau is 0.1–0.3.
+**Within a run directory you will find:**
+- **`outfile.h5`** — parameters under `meta/`; groups `step_xxxxx/` for each measured step  
+  (datasets include: `energy`, `Ntotal`, `DO`, `SZSZ`, `SPSM`, `SMSP`, `NtotNtot`, `SS`).
+- **`samples.txt`** — product‑basis states per measured step. Codes `1..4` map to `Emp`, `Up`, `Dn`, `UpDn`.
+
+Resuming a run is automatic if `samples.txt` already exists.
+
+---
+
+## Minimal Runs
+
+**Sanity check:**
+```bash
+julia --project examples/hubbard_cylinder_metts.jl   4 4 10.0 0.9375 1.0 0.10 0.3 100 1 10 5
+```
+
+**Paper‑grade template:**
+```bash
+julia --project examples/hubbard_cylinder_metts.jl   32 4 10.0 0.9375 1.0 0.10 0.2 2000 1 2000 100
+```
+
+---
+
+## Troubleshooting
+
+- **ERROR: Package ITensors not found**  
+  Use the project environment: run with `julia --project` (or `Pkg.activate(".")`).
+
+- **No measured data appears**  
+  Set `nmetts > Nwarm` so that measurements are taken after warm‑up.
+
+- **Slow / memory‑heavy**  
+  Decrease `maxD` or increase `tau` slightly.
+
+---
+
+## Performance Tips
+
+- A short DMRG warm‑up avoids long initial transients.
+- Choose `tau` and `maxD` carefully; typical `tau = 0.1–0.3`.
