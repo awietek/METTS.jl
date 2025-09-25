@@ -36,7 +36,9 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
     N = length(psi0)
     n_steps, remainder, time_tau = n_steps_remainder(time, tau)
     psi = copy(psi0)
-
+    
+    log_norm = 0.0 
+    
     for step in 1:n_steps        
         if maxlinkdim(psi) < maxm
             t = @elapsed begin
@@ -52,7 +54,6 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
                            cutoff=cutoff,
                            maxdim=maxm,
                            normalize=normalize)
-
             end
 
             svn = entropy_von_neumann(psi, N ÷ 2)
@@ -127,6 +128,8 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
                            maxdim=maxm,
                            normalize=normalize)
             end
+            svn = entropy_von_neumann(psi, N ÷ 2)
+            linkdim = maxlinkdim(psi)
             if !silent
                 @printf("    1TDVP sweep, tau: %.5f, SvN: %.4f, maxm: %6d, time: %.5f secs\n",
                         abs(remainder), svn, linkdim, t)
