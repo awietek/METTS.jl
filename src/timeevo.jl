@@ -55,7 +55,7 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
                     maxdim=maxm,
                     normalize=false)
 
-                log_norm += 2.0 * norm(psi)
+                log_norm += 2.0*log(norm(psi))
                 normalize!(psi)
             end
 
@@ -80,7 +80,7 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
                     maxdim=maxm,
                     normalize=false)
 
-                log_norm += 2.0 * norm(psi)
+                log_norm += 2.0*log(norm(psi))
                 normalize!(psi)
             end
             svn = entropy_von_neumann(psi, N ÷ 2)
@@ -111,6 +111,9 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
                     cutoff=cutoff,
                     maxdim=maxm,
                     normalize=false)
+                
+                log_norm += 2.0*log(norm(psi))
+                normalize!(psi)
             end
             svn = entropy_von_neumann(psi, N ÷ 2)
             linkdim = maxlinkdim(psi)
@@ -133,7 +136,8 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
                     cutoff=cutoff,
                     maxdim=maxm,
                     normalize=false)
-                log_norm += 2.0 * norm(psi)
+
+                log_norm += 2.0*log(norm(psi))
                 normalize!(psi)
             end
             svn = entropy_von_neumann(psi, N ÷ 2)
@@ -207,7 +211,10 @@ function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
                 nsite=1,
                 cutoff=cutoff,
                 maxdim=maxm,
-                normalize=normalize)
+                normalize=false)
+            
+            log_norm += 2.0*log(norm(psi))
+            normalize!(psi)
         end
 
         svn = entropy_von_neumann(psi, N ÷ 2)
