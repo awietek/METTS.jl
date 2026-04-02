@@ -1,8 +1,8 @@
-# METTS.jl — Quick Guide & Example (extended \(t\!-\!t'\!-\!J\) Model on a Cylinder)
+# METTS.jl — Quick Guide & Example (extended \(t-t'-J\)  Model on a Cylinder)
 
 This repository contains a minimal, reproducible example for running
 **METTS** (Minimally Entangled Typical Thermal States) with **ITensors**
-on the 2D extended **\(t\!-\!t'\!-\!J\)** model wrapped as a cylinder. The script
+on the 2D extended **\(t-t'-J\) ** model wrapped as a cylinder. The script
 computes finite-temperature observables, selected four-fermion correlators,
 and writes results to HDF5.
 
@@ -39,7 +39,7 @@ outfiles.metts/                     <-- created at runtime; outputs written here
 
 ## Model
 
-The script simulates the extended **\(t\!-\!t'\!-\!J\)** Hamiltonian on a square-lattice cylinder:
+The script simulates the extended **\(t-t'-J\)** Hamiltonian on a square-lattice cylinder:
 
 - open boundary conditions along the long direction \(x\)
 - periodic boundary conditions along the wrapped direction \(y\)
@@ -105,7 +105,7 @@ julia --project ttJ_metts.jl \
 
 For a given parameter set, the script:
 
-1. builds the \(t\!-\!t'\!-\!J\) Hamiltonian as an MPO on a cylinder
+1. builds the \(t-t'-J\)  Hamiltonian as an MPO on a cylinder
 2. initializes a product state at the target filling
 3. optionally performs a **DMRG warm-up** if the run starts from scratch
 4. runs the METTS loop using imaginary-time evolution via TDVP
@@ -331,7 +331,7 @@ or increase `T`.
 
 ## Summary
 
-This script is a METTS driver for the **extended \(t\!-\!t'\!-\!J\) model on cylindrical lattices**. It is meant for finite-temperature studies of:
+This script is a METTS driver for the **extended \(t-t'-J\) model on cylindrical lattices**. It is meant for finite-temperature studies of:
 
 - local density and spin structure
 - spin and density correlation functions
