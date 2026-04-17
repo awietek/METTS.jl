@@ -50,10 +50,12 @@ let
 
         # measurements
         energy = inner(psi', H, psi)
+
+        # Write output
         dump!(outfile, "energy", energy)
+        dump!(outfile, "product_state", product_state)
 
         # Collapse
-        dump!(outfile, "product_state", product_state)
         product_state = collapse_with_qn!(psi, "X")
     end
 end
