@@ -2,5 +2,6 @@ using METTS
 using Test
 
 @testset "METTS.jl" begin
-    # Write your tests here.
+    include("test_local_state.jl")
+    include("test_random_product_state.jl")
 end
