@@ -2,7 +2,6 @@ using ITensors
 using ITensorMPS
 using METTS
 using Dumper
-using Random
 
 let
     N = 12
