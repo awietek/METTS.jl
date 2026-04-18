@@ -2,11 +2,13 @@ using ITensors
 using ITensorMPS
 using METTS
 using Dumper
+using Random
 
 let
     N = 12
     beta = 10
     nmetts = 100
+    random_seed = 42
 
     # Time evolution parameters
     tau=0.2                   # TDVP time step
@@ -35,7 +37,7 @@ let
     sites = siteinds("S=1/2", N; conserve_sz=true)
     dump!(outfile, "local_states", local_state_strings(sites[1]))
 
-    product_state = random_product_state(sites; nup=N÷2)
+    product_state = random_product_state(sites, random_seed; nup=N÷2)
     psi = MPS(sites, product_state)
     H = MPO(ops, sites)
 
@@ -49,12 +51,10 @@ let
 
         # measurements
         energy = inner(psi', H, psi)
-
-        # Write output
         dump!(outfile, "energy", energy)
-        dump!(outfile, "product_state", product_state)
 
         # Collapse
+        dump!(outfile, "product_state", product_state)
         product_state = collapse_with_qn!(psi, "X")
     end
 end
