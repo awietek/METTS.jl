@@ -188,12 +188,10 @@ function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
     for isub in 1:nsubdiv
         l1 = maxlinkdim(psi)
         t = @elapsed begin
-            println("before basis_extend")
+            println("    Performing basis extension ...")
             flush(stdout)
             psi = basis_extend(psi, H; extension_krylovdim=kkrylov,
                 extension_cutoff=1e-12)
-            println("after basis_extend")
-            flush(stdout)
         end
         l2 = maxlinkdim(psi)
         if !silent
