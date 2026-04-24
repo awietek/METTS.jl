@@ -18,16 +18,25 @@ using ITensors
             end
         end
 
-        @testset "returns 0 and warns if product_state dataset is missing" begin
+        @testset "deletes file and returns 0 if product_state dataset is missing" begin
             mktempdir() do dir
                 filename = joinpath(dir, "no_product_state.hdf5")
                 h5open(filename, "w") do f
                     f["energy"] = [1.0, 2.0, 3.0]
                 end
                 @test_warn "product_state" count_existing_steps(filename) == 0
+                @test !isfile(filename)
             end
         end
 
+        @testset "deletes file and returns 0 if file is corrupt" begin
+            mktempdir() do dir
+                filename = joinpath(dir, "corrupt.hdf5")
+                write(filename, "this is not a valid hdf5 file")
+                @test_warn "Failed to read" count_existing_steps(filename) == 0
+                @test !isfile(filename)
+            end
+        end
         @testset "returns correct number of steps" begin
             mktempdir() do dir
                 filename = joinpath(dir, "valid.hdf5")
@@ -38,13 +47,6 @@ using ITensors
             end
         end
 
-        @testset "returns 0 and warns if file is corrupt" begin
-            mktempdir() do dir
-                filename = joinpath(dir, "corrupt.hdf5")
-                write(filename, "this is not a valid hdf5 file")
-                @test_warn "Failed to read" count_existing_steps(filename) == 0
-            end
-        end
 
     end
 
