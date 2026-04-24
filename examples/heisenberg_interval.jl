@@ -52,7 +52,7 @@ let
     H = MPO(ops, sites)
 
     measure       = psi -> Dict("energy" => inner(psi', H, psi))
-    collapse_func = psi -> collapse_with_qn!(psi, "X")
+    collapse_func = psi -> collapse_with_qn(psi, "X")
 
     for step in 1:nmetts
         psi, log_norm, measurements, product_state, times =
