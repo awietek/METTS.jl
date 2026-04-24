@@ -24,19 +24,22 @@ using ITensors
                 h5open(filename, "w") do f
                     f["energy"] = [1.0, 2.0, 3.0]
                 end
-                @test_warn "product_state" count_existing_steps(filename) == 0
+                @test_warn "product_state" count_existing_steps(filename)
+                @test count_existing_steps(joinpath(dir, "no_product_state.hdf5")) == 0  # file deleted, so 0
                 @test !isfile(filename)
             end
         end
 
-        @testset "deletes file and returns 0 if file is corrupt" begin
+        @testset "warns and returns 0 if file is corrupt, does not delete" begin
             mktempdir() do dir
                 filename = joinpath(dir, "corrupt.hdf5")
                 write(filename, "this is not a valid hdf5 file")
-                @test_warn "Failed to read" count_existing_steps(filename) == 0
-                @test !isfile(filename)
+                @test_warn "corrupted" count_existing_steps(filename)
+                @test count_existing_steps(filename) == 0
+                @test isfile(filename)
             end
         end
+
         @testset "returns correct number of steps" begin
             mktempdir() do dir
                 filename = joinpath(dir, "valid.hdf5")
@@ -46,7 +49,6 @@ using ITensors
                 @test count_existing_steps(filename) == 5
             end
         end
-
 
     end
 

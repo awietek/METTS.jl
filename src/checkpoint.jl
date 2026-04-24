@@ -12,7 +12,7 @@ does not exist. Deletes the file and warns if it is corrupt or has no
 function count_existing_steps(filename::String)::Int
     isfile(filename) || return 0
     try
-        h5open(filename, "r") do f
+        result = h5open(filename, "r") do f
             if !haskey(f, "product_state")
                 @warn "Checkpoint file exists but contains no `product_state` dataset, deleting and starting fresh." filename
                 rm(filename)
@@ -20,9 +20,13 @@ function count_existing_steps(filename::String)::Int
             end
             length(read(f["product_state"]))
         end
+        return result
     catch e
-        @warn "Failed to read checkpoint file, deleting and starting fresh." filename exception=e
-        rm(filename)
+        if isa(e, HDF5.Exception)
+            @warn "Checkpoint file appears corrupted, please inspect it manually before continuing." filename exception=e
+        else
+            @warn "Checkpoint file is unavailable." filename exception=e
+        end
         return 0
     end
 end
