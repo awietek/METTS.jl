@@ -28,13 +28,30 @@ let
     solver_backend = "applyexp"
     shift  = 0.
 
+
+    # --- Check for existing data ---
+    steps_done = count_existing_steps(outfile)
+    if steps_done >= nmetts
+        println("Already have $steps_done/$nmetts steps. Nothing to do.")
+        return
+    elseif steps_done > 0
+        println("Resuming from step $(steps_done + 1)/$nmetts")
+    else
+        println("Starting fresh run.")
+    end
+
     outfile = DumpFile(outfile_path)
 
-    # Store run metadata once
-    outfile["beta_collapse"] = beta_collapse
-    outfile["beta_min"]      = beta_min
-    outfile["beta_max"]      = beta_max
-    outfile["tau"]           = tau
+
+
+    if steps_done == 0
+        # Store run metadata once
+        outfile["beta_collapse"] = beta_collapse
+        outfile["beta_min"]      = beta_min
+        outfile["beta_max"]      = beta_max
+        outfile["tau"]           = tau
+    end
+    
 
     # Create Heisenberg Chain model (open b.c.)
     ops = OpSum()
@@ -45,16 +62,24 @@ let
     end
 
     sites = siteinds("S=1/2", N; conserve_sz=true)
-    outfile["local_states"] = local_state_strings(sites[1])
+    if steps_done == 0
+        outfile["local_states"] = local_state_strings(sites[1])
+    end
 
-    product_state = random_product_state(sites, random_seed; nup=N÷2)
+    if steps_done == 0
+        product_state = random_product_state(sites, random_seed; nup=N÷2)
+    else
+        println("Reading last product state from file...")
+        product_state = read_last_product_state(filename)
+    end
+
     psi = MPS(sites, product_state)
     H = MPO(ops, sites)
 
     measure       = psi -> Dict("energy" => inner(psi', H, psi))
     collapse_func = psi -> collapse_with_qn(psi, "X")
 
-    for step in 1:nmetts
+    for step in (steps_done + 1):nmetts
         psi, log_norm, measurements, product_state, times =
             timeevo_tdvp_extend_measurements(
                 H, psi, beta_min/2, beta_max/2, beta_collapse/2, measure, collapse_func;
