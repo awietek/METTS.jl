@@ -4,11 +4,11 @@ using HDF5
 
 Returns the number of completed METTS steps already stored in the HDF5 file
 by counting the entries in the `product_state` dataset. Returns 0 if the file
-does not exist. Throws an error if it is corrupt or has no
+does not exist. Throws an error if it is corrupted or has no
 `product_state` dataset.
 """
 function count_existing_steps(filename::String, product_state_name::String)::Int
-    isfile(filename) || return 0 # in case the file does not exist
+    isfile(filename) || return 0
     try
         result = h5open(filename, "r") do f
             if !haskey(f, product_state_name)

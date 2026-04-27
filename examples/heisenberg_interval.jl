@@ -34,14 +34,14 @@ let
     sites = siteinds("S=1/2", N; conserve_sz=true)
 
     # --- Check for existing data --- #
-    steps_done = count_existing_steps(outfile)
+    steps_done = count_existing_steps(outfile, "product_state")
 
     if steps_done >= nmetts
         println("Already have $steps_done/$nmetts steps. Nothing to do.")
         return
     elseif steps_done > 0
         println("Resuming from step $(steps_done + 1)/$nmetts. Reading last product state from file...")
-        product_state = read_last_product_state(filename)
+        product_state = read_last_product_state(filename,"product_state")
     else
         # Store run metadata once
         outfile["beta_collapse"] = beta_collapse
