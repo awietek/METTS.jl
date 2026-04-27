@@ -28,30 +28,34 @@ let
     solver_backend = "applyexp"
     shift  = 0.
 
+    ## outfile to dump measurements
+    outfile = DumpFile(outfile_path)
 
-    # --- Check for existing data ---
+    sites = siteinds("S=1/2", N; conserve_sz=true)
+
+    # --- Check for existing data --- #
     steps_done = count_existing_steps(outfile)
+
     if steps_done >= nmetts
         println("Already have $steps_done/$nmetts steps. Nothing to do.")
         return
     elseif steps_done > 0
-        println("Resuming from step $(steps_done + 1)/$nmetts")
+        println("Resuming from step $(steps_done + 1)/$nmetts. Reading last product state from file...")
+        product_state = read_last_product_state(filename)
     else
-        println("Starting fresh run.")
-    end
-
-    outfile = DumpFile(outfile_path)
-
-
-
-    if steps_done == 0
         # Store run metadata once
         outfile["beta_collapse"] = beta_collapse
         outfile["beta_min"]      = beta_min
         outfile["beta_max"]      = beta_max
         outfile["tau"]           = tau
+        outfile["local_states"] = local_state_strings(sites[1])
+
+        #create first product state:
+        product_state = random_product_state(sites, random_seed; nup=N÷2)
     end
-    
+
+    psi = MPS(sites, product_state)
+
 
     # Create Heisenberg Chain model (open b.c.)
     ops = OpSum()
@@ -61,19 +65,7 @@ let
         ops += "Sz", s, "Sz", s+1
     end
 
-    sites = siteinds("S=1/2", N; conserve_sz=true)
-    if steps_done == 0
-        outfile["local_states"] = local_state_strings(sites[1])
-    end
 
-    if steps_done == 0
-        product_state = random_product_state(sites, random_seed; nup=N÷2)
-    else
-        println("Reading last product state from file...")
-        product_state = read_last_product_state(filename)
-    end
-
-    psi = MPS(sites, product_state)
     H = MPO(ops, sites)
 
     measure       = psi -> Dict("energy" => inner(psi', H, psi))
