@@ -9,21 +9,21 @@ using HDF5
 
 if length(ARGS) < 11
     println("Usage: julia --project examples/hubbard_cylinder_metts.jl ",
-            "L W U filling t T tau maxD seed nmetts Nwarm")
+        "L W U filling t T tau maxD seed nmetts Nwarm")
     exit(1)
 end
 
-L       = parse(Int,    ARGS[1])
-W       = parse(Int,    ARGS[2])
-U       = parse(Float64,ARGS[3])
-filling = parse(Float64,ARGS[4])
-t       = parse(Float64,ARGS[5])
-T       = parse(Float64,ARGS[6])
-tau     = parse(Float64,ARGS[7])
-maxD    = parse(Int,    ARGS[8])
-seed    = parse(Int,    ARGS[9])
-nmetts  = parse(Int,    ARGS[10])
-Nwarm   = parse(Int,    ARGS[11])
+L = parse(Int, ARGS[1])
+W = parse(Int, ARGS[2])
+U = parse(Float64, ARGS[3])
+filling = parse(Float64, ARGS[4])
+t = parse(Float64, ARGS[5])
+T = parse(Float64, ARGS[6])
+tau = parse(Float64, ARGS[7])
+maxD = parse(Int, ARGS[8])
+seed = parse(Int, ARGS[9])
+nmetts = parse(Int, ARGS[10])
+Nwarm = parse(Int, ARGS[11])
 
 if nmetts <= Nwarm
     @warn "nmetts <= Nwarm -> no measured samples will be stored."
@@ -33,9 +33,9 @@ end
 # running mean +/- stderr
 function avg_err(v::Vector{<:Real})
     N = length(v)
-    avg  = sum(v) / N
-    avg2 = sum(x->x*x, v) / N
-    return avg, sqrt(max(0, avg2 - avg^2)/N)
+    avg = sum(v) / N
+    avg2 = sum(x -> x * x, v) / N
+    return avg, sqrt(max(0, avg2 - avg^2) / N)
 end
 
 
@@ -68,7 +68,7 @@ end
 
 # Hubbard MPO on an LxW cylinder
 function fermi_hubbard_cylinder_mpo(L, W, t, U, sites)
-    N = L*W
+    N = L * W
     lat = square_lattice(L, W; yperiodic=true)
     os = OpSum()
     for b in lat
@@ -84,13 +84,19 @@ function fermi_hubbard_cylinder_mpo(L, W, t, U, sites)
 end
 
 # HDF5: create file and write metadata once
-function h5_init(outfile; L,W,U,filling,t,T,tau,maxD,seed,Nwarm)
+function h5_init(outfile; L, W, U, filling, t, T, tau, maxD, seed, Nwarm)
     h5open(outfile, "w") do f
         g = create_group(f, "meta")
-        g["L"] = L; g["W"] = W; g["U"] = U
-        g["filling"] = filling; g["t"] = t; g["T"] = T
-        g["tau"] = tau; g["maxD"] = maxD;
-        g["seed"] = seed; g["Nwarm"] = Nwarm
+        g["L"] = L
+        g["W"] = W
+        g["U"] = U
+        g["filling"] = filling
+        g["t"] = t
+        g["T"] = T
+        g["tau"] = tau
+        g["maxD"] = maxD
+        g["seed"] = seed
+        g["Nwarm"] = Nwarm
     end
 end
 
@@ -99,14 +105,14 @@ function h5_write_step(outfile::AbstractString, step::Int; energy, Ntotal, dob, 
     h5open(outfile, "r+") do f
         gname = @sprintf("step_%06d", step)
         g = haskey(f, gname) ? f[gname] : create_group(f, gname)
-        g["energy"]    = energy
-        g["Ntotal"]    = Ntotal
-        g["DO"]        = dob
-        g["SZSZ"]      = szszs
-        g["SPSM"]      = spsms
-        g["SMSP"]      = smsps
-        g["NtotNtot"]  = ntnt
-        g["SS"]        = SS
+        g["energy"] = energy
+        g["Ntotal"] = Ntotal
+        g["DO"] = dob
+        g["SZSZ"] = szszs
+        g["SPSM"] = spsms
+        g["SMSP"] = smsps
+        g["NtotNtot"] = ntnt
+        g["SS"] = SS
     end
 end
 
@@ -114,8 +120,8 @@ end
 function main()
 
     outroot = get(ENV, "METTS_OUTDIR", joinpath(pwd(), "outfiles.metts"))
-    outdir  = @sprintf("%s/L.%d.W.%d/U.%.3f/filling.%.5f/T.%.5f/D.%d/tau.%.2f.seed.%d",
-                       outroot, L, W, U, filling, T, maxD, tau, seed)
+    outdir = @sprintf("%s/L.%d.W.%d/U.%.3f/filling.%.5f/T.%.5f/D.%d/tau.%.2f.seed.%d",
+        outroot, L, W, U, filling, T, maxD, tau, seed)
     mkpath(outdir)
     outfile = joinpath(outdir, "outfile.h5")
     smpfile = joinpath(outdir, "samples.txt")
@@ -129,13 +135,13 @@ function main()
 
     Random.seed!(seed)
 
-    N     = L*W
-    beta  = 1/T
+    N = L * W
+    beta = 1 / T
     sites = siteinds("Electron", N; conserve_qns=true)
-    H     = fermi_hubbard_cylinder_mpo(L, W, t, U, sites)
+    H = fermi_hubbard_cylinder_mpo(L, W, t, U, sites)
 
     # init HDF5 with metadata
-    h5_init(outfile; L,W,U,filling,t,T,tau,maxD,seed,Nwarm)
+    h5_init(outfile; L, W, U, filling, t, T, tau, maxD, seed, Nwarm)
 
     # resume if samples exist
     samples, start_step = load_samples(smpfile)
@@ -151,13 +157,15 @@ function main()
             state[i] = decode_occ(last[i])
         end
     else
-        Ne = round(Int, filling*N)
+        Ne = round(Int, filling * N)
         @assert iseven(Ne) "Ne must be even for equal up/down"
         perm = Random.randperm(N)
-        up   = perm[1:Ne÷2]
-        dn   = setdiff(perm, up)[1:Ne÷2]
+        up = perm[1:Ne÷2]
+        dn = setdiff(perm, up)[1:Ne÷2]
         fill!(state, "Emp")
-        @inbounds for i in up; state[i] = "Up"; end
+        @inbounds for i in up
+            state[i] = "Up"
+        end
         @inbounds for i in dn
             state[i] = (state[i] == "Up") ? "UpDn" : "Dn"
         end
@@ -168,14 +176,15 @@ function main()
     if start_step == 0
         println("DMRG warmup ...")
         nsweeps = 10
-        maxdim  = [10, 20, 20, 50, 50, 100, 100, 100, 200, 200]
+        maxdim = [10, 20, 20, 50, 50, 100, 100, 100, 200, 200]
         cutoff = 1e-6
         energy_dmrg, psi_dmrg = dmrg(H, psi; nsweeps, maxdim, cutoff=cutoff)
         println("Sampling post-DMRG wavefunction ...")
         samp0 = collapse_with_qn!(psi_dmrg, "Z")
         new_state = [decode_occ(samp0[j]) for j in 1:N]
         psi = randomMPS(sites, new_state)
-        samples[0] = samp0; save_samples(smpfile, samples)
+        samples[0] = samp0
+        save_samples(smpfile, samples)
     else
         println("Skipping warmup (resumed run).")
     end
@@ -183,10 +192,12 @@ function main()
     # TDVP (imaginary time beta/2)
     function evo!(psi_in, beta_in)
         if beta_in > 1e-14
-            return timeevo_tdvp_extend(H, psi_in, -(beta_in/2);
-                                       tau=tau, normalize=true,
-                                       solver_backend="applyexp",
-                                       maxm=maxD, kkrylov=2, tau0=0.02, nsubdiv=2)
+            psi_in, norm = timeevo_tdvp_extend(H, psi_in, -(beta_in / 2);
+                tau=tau, normalize=true,
+                solver_backend="applyexp",
+                maxm=maxD, kkrylov=2, tau0=0.02, nsubdiv=2)
+
+            return psi_in
         else
             return psi_in
         end
@@ -209,30 +220,30 @@ function main()
                 println("Measuring ...")
                 energy = inner(psi', H, psi)
                 Ntotal = expect(psi, "Ntot")
-                dob    = expect(psi, "Nupdn")
-                szszs  = correlation_matrix(psi, "Sz","Sz"; ishermitian=true)
-                spsms  = correlation_matrix(psi, "S+","S-"; ishermitian=false)
-                smsps  = correlation_matrix(psi, "S-","S+"; ishermitian=false)
-                ntnt   = correlation_matrix(psi, "Ntot","Ntot"; ishermitian=true)
-                SS     = szszs + 0.5*(smsps + spsms)
+                dob = expect(psi, "Nupdn")
+                szszs = correlation_matrix(psi, "Sz", "Sz"; ishermitian=true)
+                spsms = correlation_matrix(psi, "S+", "S-"; ishermitian=false)
+                smsps = correlation_matrix(psi, "S-", "S+"; ishermitian=false)
+                ntnt = correlation_matrix(psi, "Ntot", "Ntot"; ishermitian=true)
+                SS = szszs + 0.5 * (smsps + spsms)
 
                 push!(energies, energy)
                 aE, eE = avg_err(energies)
                 @printf("Energy[%d] = %.6f   running mean(E) = %.6f +/- %.6f\n", step, energy, aE, eE)
-                dens = sum(Ntotal)/(L*W)
+                dens = sum(Ntotal) / (L * W)
                 @printf("density = %.6f\n", dens)
 
                 # HDF5 write for this step
                 h5_write_step(outfile, step;
-                              energy=energy, Ntotal=Ntotal, dob=dob,
-                              szszs=szszs, spsms=spsms, smsps=smsps,
-                              ntnt=ntnt, SS=SS)
+                    energy=energy, Ntotal=Ntotal, dob=dob,
+                    szszs=szszs, spsms=spsms, smsps=smsps,
+                    ntnt=ntnt, SS=SS)
             end
             @printf("Step %d meas+dump time: %.3f s\n", step, t_iter)
 
             # Collapse, save sample, reinit
             samp = collapse_with_qn!(psi, "X")
-            samples[step - Nwarm] = samp
+            samples[step-Nwarm] = samp
             save_samples(smpfile, samples)
             psi = randomMPS(sites, [decode_occ(samp[j]) for j in 1:N])
             GC.gc()
