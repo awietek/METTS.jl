@@ -47,7 +47,7 @@ end
 Reads the last collapsed product state from the HDF5 file. Errors if
 the file cannot be read or the dataset is empty.
 """
-function read_last_product_state(filename::String, product_state_name::String)::Vector{Int}
+function read_last_product_state(filename::String, product_state_name::String)
     isfile(filename) || error("File '$filename' not found.")
     try
         product_state = h5open(filename, "r") do f
