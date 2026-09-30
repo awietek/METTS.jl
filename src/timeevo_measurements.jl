@@ -43,9 +43,8 @@ function timeevo_tdvp_extend_measurements(
     tau::Number=0.1, cutoff::Float64=1e-6,
     maxm::Int64=1000, tau0::Float64=0.05,
     nsubdiv::Int64=4, kkrylov::Int64=3,
-    normalize::Bool=true, silent=false,
-    solver_backend::AbstractString="applyexp",
-    shift::Real=0.)
+    silent=false,
+    solver_backend::AbstractString="applyexp")
 
     @assert t_min < t_max "t_min must be strictly less than t_max"
     @assert tau0 <= tau "tau0 must be <= tau"

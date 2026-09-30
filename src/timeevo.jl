@@ -8,17 +8,22 @@ function n_steps_remainder(time::Number, tau::Real)
     return n_steps, remainder, time_tau
 end
 
+"""
+    entropy_von_neumann(psi::MPS, b::Int) -> Float64
+
+Von Neumann entanglement entropy `S = -Σ p log p` of the bipartition between
+sites `b` and `b+1`. `psi` is not modified and need not be normalized.
+"""
 function entropy_von_neumann(psi::MPS, b::Int)
-    nrm = norm(psi)
-    s = siteinds(psi)
-    orthogonalize!(psi, b)
-    _, S = svd(psi[b], (linkind(psi, b - 1), s[b]))
-    SvN = 0.0
-    for n in 1:dim(S, 1)
-        p = (S[n, n] / nrm)^2
-        SvN -= p * log(p)
-    end
-    return SvN
+    N = length(psi)
+    1 <= b < N || error("bond b=$b must lie in 1:$(N - 1)")
+    psi = orthogonalize(psi, b)
+    linds = b == 1 ? (siteind(psi, b),) : (linkind(psi, b - 1), siteind(psi, b))
+    _, S, _ = svd(psi[b], linds...)
+    p = [S[n, n]^2 for n in 1:dim(S, 1)]
+    p ./= sum(p)
+    # singular values that are zero (or numerically so) do not contribute
+    return -sum((x * log(x) for x in p if x > 1e-16); init=0.0)
 end
 
 """
@@ -30,9 +35,10 @@ a commensurate step size is automatically chosen
 """
 function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
     tau::Number=0.1, cutoff::Float64=1e-6,
-    maxm::Int64=1000, normalize::Bool=true,
-    silent=false, solver_backend::AbstractString="applyexp",
-    shift::Real=0.)
+    maxm::Int64=1000,
+    silent=false, solver_backend::AbstractString="applyexp")
+    # nothing to evolve; n_steps_remainder would divide 0 by 0
+    iszero(time) && return copy(psi0), 0.0
     N = length(psi0)
     n_steps, remainder, time_tau = n_steps_remainder(time, tau)
     psi = copy(psi0)
@@ -42,11 +48,6 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
     for step in 1:n_steps
         if maxlinkdim(psi) < maxm
             t = @elapsed begin
-                # psi = tdvp(H, psi, time_tau / n_steps;
-                #            nsweeps=1, nsite=2, cutoff=cutoff,
-                #            maxdim=maxm, normalize=normalize,
-                #            solver_backend=solver_backend, shift=shift)
-
                 psi = tdvp(H, time_tau / n_steps, psi;
                     updater_backend=solver_backend,
                     nsweeps=1,
@@ -68,10 +69,6 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
             end
         else
             t = @elapsed begin
-                # psi = tdvp(H, psi, time_tau / n_steps;
-                #            nsweeps=1, nsite=1, cutoff=cutoff,
-                #            maxdim=maxm, normalize=normalize,
-                #            solver_backend=solver_backend, shift=shift)
                 psi = tdvp(H, time_tau / n_steps, psi;
                     updater_backend=solver_backend,
                     nsweeps=1,
@@ -99,11 +96,6 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
     if !isapprox(remainder, 0; rtol=1e-6, atol=1e-6)
         if maxlinkdim(psi) < maxm
             t = @elapsed begin
-                # psi = tdvp(H, psi, remainder;
-                #            nsweeps=1, nsite=2, cutoff=cutoff,
-                #            maxdim=maxm, normalize=normalize,
-                #            solver_backend=solver_backend, shift=shift)
-
                 psi = tdvp(H, remainder, psi;
                     updater_backend=solver_backend,
                     nsweeps=1,
@@ -124,11 +116,6 @@ function timeevo_tdvp(H::MPO, psi0::MPS, time::Number;
             end
         else
             t = @elapsed begin
-                # psi = tdvp(H, psi, remainder;
-                #            nsweeps=1, nsite=1, cutoff=cutoff,
-                #            maxdim=maxm, normalize=normalize,
-                #            solver_backend=solver_backend, shift=shift)
-
                 psi = tdvp(H, remainder, psi;
                     updater_backend=solver_backend,
                     nsweeps=1,
@@ -162,15 +149,19 @@ Time evolution using TDVP with intitial basis extension
 starting out with 2TDVP until a maximal bond dimension is achieved
 then it switches to 1TDVP
 a commensurate step size is automatically chosen
+
+Returns the evolved state, always normalized, and `log_norm = log ‖exp(time H) psi0‖²`
+for a normalized `psi0`; for METTS with `time = -β/2` and a product state
+`|σ⟩` this is `log ⟨σ|exp(-βH)|σ⟩`. Weight lost to truncation is included.
 """
 function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
     tau::Number=0.1, cutoff::Float64=1e-6,
     maxm::Int64=1000, tau0::Float64=0.05,
     nsubdiv::Int64=4, kkrylov::Int64=3,
-    normalize::Bool=true, silent=false,
-    solver_backend::AbstractString="applyexp",
-    shift::Real=0.)
+    silent=false,
+    solver_backend::AbstractString="applyexp")
 
+    iszero(time) && return copy(psi0), 0.0
     log_norm = 0.0
 
     N = length(psi0)
@@ -188,8 +179,10 @@ function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
     for isub in 1:nsubdiv
         l1 = maxlinkdim(psi)
         t = @elapsed begin
-            println("    Performing basis extension ...")
-            flush(stdout)
+            if !silent
+                println("    Performing basis extension ...")
+                flush(stdout)
+            end
             psi = basis_extend(psi, H; extension_krylovdim=kkrylov,
                 extension_cutoff=1e-12)
         end
@@ -199,10 +192,6 @@ function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
                 l1, l2, t)
         end
         t = @elapsed begin
-            # psi = tdvp(H, psi, times_init[isub];
-            #            nsweeps=1, nsite=1, cutoff=1e-16,
-            #            maxdim=maxm, normalize=normalize,
-            #            solver_backend=solver_backend, shift=shift)
             psi = tdvp(H, times_init[isub], psi;
                 updater_backend=solver_backend,
                 nsweeps=1,
@@ -228,8 +217,7 @@ function timeevo_tdvp_extend(H::MPO, psi0::MPS, time::Number;
     # Perform the bulk time evolution
     time_bulk = time - time_init
     psi, norm_tmp = timeevo_tdvp(H, psi, time_bulk; tau=tau, cutoff=cutoff, maxm=maxm,
-        normalize=normalize, silent=silent,
-        solver_backend=solver_backend, shift=shift)
+        silent=silent, solver_backend=solver_backend)
 
     log_norm += norm_tmp
 

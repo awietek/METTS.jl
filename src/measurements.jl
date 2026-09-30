@@ -55,15 +55,13 @@ This example measures the energy of the system at inverse temperature β = 1.0.
 function metts_single_temperature(measure_func::Function, psi0::MPS, beta_sample::Real, H::MPO, τ::Real, cutoff::Real, maxBond::Int, tau0::Real, nsubdiv::Int; args...)
 
     ### Time evolution from product state
-    phi, norm_1 = timeevo_tdvp_extend(H, psi0, -beta_sample / 2.0;  # Note: current implementation may not allow certain options
+    phi, norm_1 = timeevo_tdvp_extend(H, psi0, -beta_sample / 2.0;
         tau=τ,
         cutoff=cutoff,
-        normalize=true,
         maxm=maxBond,
         tau0=tau0,
         nsubdiv=nsubdiv,
-        solver_backend="applyexp",
-        shift=0.0)
+        solver_backend="applyexp")
 
     return measure_func(phi, H, args...), phi
 end
@@ -153,11 +151,10 @@ function metts_interval_temperatures(measure_func::Function, psi0::MPS, beta_sam
     psi0, norm_1 = timeevo_tdvp_extend(H, psi0, -time_intervals[1];
         tau=τ,
         cutoff=cutoff,
-        normalize=true,
         maxm=maxBond,
         tau0=tau0,
         nsubdiv=nsubdiv,
-        solver_backend="applyexp", shift=0.0)
+        solver_backend="applyexp")
 
     logweight[1] = norm_1
     normalize!(psi0)
@@ -167,9 +164,8 @@ function metts_interval_temperatures(measure_func::Function, psi0::MPS, beta_sam
         psi0, norm_1 = timeevo_tdvp(H, psi0, -time_intervals[i];
             tau=τ,
             cutoff=cutoff,
-            normalize=false,
             maxm=maxBond,
-            solver_backend="applyexp", shift=0.0)
+            solver_backend="applyexp")
         
         logweight[i] = norm_1 + logweight[i-1]
         normalize!(psi0)
@@ -184,9 +180,8 @@ function metts_interval_temperatures(measure_func::Function, psi0::MPS, beta_sam
         psi0, norm_1 = timeevo_tdvp(H, psi0, -time_intervals[i];
             tau=τ,
             cutoff=cutoff,
-            normalize=false,
             maxm=maxBond,
-            solver_backend="applyexp", shift=0.0)
+            solver_backend="applyexp")
 
         logweight[i] = norm_1 + logweight[i-1]
         normalize!(psi0)
