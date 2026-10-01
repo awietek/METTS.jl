@@ -1,8 +1,9 @@
 # ---------------------------------------------------------------------------
 # Checkpointed METTS chains. One HDF5 file holds one Markov chain:
 #
+#   /parameters      group, one scalar dataset per run parameter (for the record)
 #   /local_states    String (nlocal,)
-#   /rng_seed        UInt64 (nsteps + 1,)         seed of the Xoshiro random
+#   /rng_seed       UInt64 (nsteps + 1,)         seed of the Xoshiro random
 #                    number generator step k uses
 #   /product_state   UInt8  (nsites, nsteps + 1)  0-based into local_states;
 #                    column k is the product state evolved in step k
@@ -20,8 +21,8 @@
 # With nstates columns of product_state, nstates - 1 steps are completed.
 # Every entry is written at its step index rather than appended, so whatever
 # a crash left of an unfinished step is simply overwritten when the step is
-# redone. The file belongs to the checkpoint: every dataset other than
-# local_states counts as per-step data.
+# redone. The file belongs to the checkpoint: everything other than
+# parameters and local_states counts as per-step data.
 #
 # At the end of every step the random number generator draws the seed of a
 # fresh Xoshiro for the next step. Storing that seed is all it takes to
@@ -31,7 +32,8 @@
 const _PRODUCT_STATE = "product_state"
 const _RNG_SEED = "rng_seed"
 const _LOCAL_STATES = "local_states"
-const _RESERVED = (_PRODUCT_STATE, _RNG_SEED, _LOCAL_STATES)
+const _PARAMETERS = "parameters"
+const _RESERVED = (_PRODUCT_STATE, _RNG_SEED, _LOCAL_STATES, _PARAMETERS)
 
 _entry(x) = x isa AbstractArray ? x : fill(x)       # numbers as 0-dim arrays
 _colons(n) = ntuple(_ -> Colon(), n)
@@ -91,16 +93,20 @@ function valid_checkpoint(filename::AbstractString)
 end
 
 """
-    metts_start(filename, sites, initial_state, rng)
+    metts_start(filename, sites, initial_state, rng; parameters=(;))
 
 Start a new METTS chain in `filename` whose first step evolves the product
 state `initial_state` (1-based ITensors state indices) and uses a `Xoshiro`
 random number generator seeded from `rng`. Continue it with `metts_resume`,
 which returns that state and generator. A file left by an interrupted
 `metts_start` is replaced; a `valid_checkpoint` is never overwritten.
+
+`parameters` maps names to numbers or strings (e.g. a `NamedTuple` of the run
+parameters); they are stored as scalar datasets in the group `/parameters`,
+for the record, and returned by `read_metts`.
 """
 function metts_start(filename::AbstractString, sites, initial_state::AbstractVector{<:Integer},
-                     rng::AbstractRNG)
+                     rng::AbstractRNG; parameters=(;))
     valid_checkpoint(filename) &&
         error("'$filename' already holds a METTS chain; continue it with metts_resume or remove it")
     length(initial_state) == length(sites) ||
@@ -110,6 +116,10 @@ function metts_start(filename::AbstractString, sites, initial_state::AbstractVec
     seed = rand(rng, UInt64)
     mkpath(dirname(abspath(filename)))
     h5open(filename, "w") do f
+        g = create_group(f, _PARAMETERS)
+        for (name, value) in pairs(parameters)
+            g[String(name)] = value
+        end
         f[_LOCAL_STATES] = ls
         _write_entry!(f, _RNG_SEED, 1, seed)
         _write_entry!(f, _PRODUCT_STATE, 1, encoded)  # last: marks the start as completed
@@ -139,7 +149,7 @@ function metts_resume(filename::AbstractString, sites)
         # the write order guarantees these; anything else is a damaged file
         haskey(f, _RNG_SEED) || error("'$filename' has product states but no '$_RNG_SEED'")
         for name in keys(f)
-            name in (_PRODUCT_STATE, _LOCAL_STATES) && continue
+            name in (_PRODUCT_STATE, _LOCAL_STATES, _PARAMETERS) && continue
             expected = name == _RNG_SEED ? nstates : nstates - 1
             _nentries(f[name]) >= expected ||
                 error("'$filename': '$name' has $(_nentries(f[name])) entries, expected $expected")
@@ -211,13 +221,15 @@ function metts_dump_step!(filename::AbstractString, observables,
 end
 
 """
-    read_metts(filename) -> (; nsteps, local_states, product_states, observables)
+    read_metts(filename) -> (; nsteps, local_states, product_states, observables, parameters)
 
 Read the completed steps of the METTS chain in `filename`, without modifying
 it. `product_states` is a `Matrix{Int}` of size `(nsites, nsteps)` with
 1-based ITensors state indices, column `k` being the product state of step `k`
 (the state the next step would start from is not included). `observables`
 maps each name to its values, the last dimension running over the steps.
+`parameters` maps the names of the parameters given to `metts_start` to their
+values.
 """
 function read_metts(filename::AbstractString)
     h5open(filename, "r") do f
@@ -230,8 +242,9 @@ function read_metts(filename::AbstractString)
             a = read(f[name])
             observables[name] = collect(selectdim(a, ndims(a), 1:min(n, size(a, ndims(a)))))
         end
+        parameters = haskey(f, _PARAMETERS) ? Dict{String,Any}(read(f[_PARAMETERS])) : Dict{String,Any}()
         return (; nsteps=n, local_states=read(f, _LOCAL_STATES),
-                product_states=Int.(ps[:, 1:n]) .+ 1, observables)
+                product_states=Int.(ps[:, 1:n]) .+ 1, observables, parameters)
     end
 end
 

@@ -16,7 +16,8 @@ using Random
 
     # the pattern of a METTS script: start the chain if needed, then continue it
     function run_chain!(filename, nsteps; seed=11)
-        valid_checkpoint(filename) || metts_start(filename, sites, initial, Xoshiro(seed))
+        valid_checkpoint(filename) ||
+            metts_start(filename, sites, initial, Xoshiro(seed); parameters=(; seed, T=0.5, init="dmrg"))
         state, rng, ndone = metts_resume(filename, sites)
         for _ in (ndone + 1):nsteps
             obs, state = fake_step(state, rng)
@@ -50,6 +51,21 @@ using Random
             end
             @test metts_resume(filename, sites) == (initial, Xoshiro(seed), 0)
             @test read_metts(filename).nsteps == 0
+            @test read_metts(filename).parameters == Dict{String,Any}()
+        end
+    end
+
+    @testset "parameters" begin
+        mktempdir() do dir
+            filename = joinpath(dir, "chain.h5")
+            run_chain!(filename, 3)
+            r = read_metts(filename)
+            @test r.parameters == Dict{String,Any}("seed" => 11, "T" => 0.5, "init" => "dmrg")
+            @test !haskey(r.observables, "parameters")
+            h5open(filename, "r") do f
+                @test read(f["parameters/T"]) == 0.5
+            end
+            @test_throws ErrorException metts_dump_step!(filename, (; parameters=1.0), initial, Xoshiro(1))
             # a chain is never overwritten
             @test_throws ErrorException metts_start(filename, sites, initial, Xoshiro(1))
         end
