@@ -180,7 +180,7 @@ function main()
         cutoff = 1e-6
         energy_dmrg, psi_dmrg = dmrg(H, psi; nsweeps, maxdim, cutoff=cutoff)
         println("Sampling post-DMRG wavefunction ...")
-        samp0 = collapse_with_qn!(psi_dmrg, "Z")
+        samp0 = collapse_with_qn(psi_dmrg, "Z")
         new_state = [decode_occ(samp0[j]) for j in 1:N]
         psi = randomMPS(sites, new_state)
         samples[0] = samp0
@@ -193,7 +193,7 @@ function main()
     function evo!(psi_in, beta_in)
         if beta_in > 1e-14
             psi_in, norm = timeevo_tdvp_extend(H, psi_in, -(beta_in / 2);
-                tau=tau, normalize=true,
+                tau=tau,
                 solver_backend="applyexp",
                 maxm=maxD, kkrylov=2, tau0=0.02, nsubdiv=2)
 
@@ -210,7 +210,7 @@ function main()
         if step <= Nwarm
             println("Warm-up step (no storage).")
             psi = evo!(psi, beta)
-            samp = collapse_with_qn!(psi, "X")
+            samp = collapse_with_qn(psi, "X")
             psi = randomMPS(sites, [decode_occ(samp[j]) for j in 1:N])
         else
             t_iter = @elapsed begin
@@ -242,7 +242,7 @@ function main()
             @printf("Step %d meas+dump time: %.3f s\n", step, t_iter)
 
             # Collapse, save sample, reinit
-            samp = collapse_with_qn!(psi, "X")
+            samp = collapse_with_qn(psi, "X")
             samples[step-Nwarm] = samp
             save_samples(smpfile, samples)
             psi = randomMPS(sites, [decode_occ(samp[j]) for j in 1:N])

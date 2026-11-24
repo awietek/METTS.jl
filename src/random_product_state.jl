@@ -1,12 +1,14 @@
 """
-    random_product_state(sites; nup=nothing, ndn=nothing)
+    random_product_state(sites, seed=42; nup=nothing, ndn=nothing)
+    random_product_state(rng::AbstractRNG, sites; nup=nothing, ndn=nothing)
 
 Return a `Vector{Int}` of state indices for a random product state for the given sites.
 The integers represent basis state indices as defined by ITensors (1-based).
 
 Supported site types: `"S=1/2"`, `"tJ"`, `"Electron"`.
 
-- `seed`: random seed of random number generator (optional)
+- `seed`: seed of a fresh `MersenneTwister` used for this state (optional)
+- `rng`: random number generator to draw from, advanced by the call
 - `nup`: number of up-spin electrons (optional)
 - `ndn`: number of down-spin electrons (optional; ignored for `"S=1/2"`)
 
@@ -16,8 +18,10 @@ For `"Electron"`, double occupancy is allowed when up/down electrons share the s
 If neither `nup` nor `ndn` is specified, each site is assigned a uniformly random state.
 """
 function random_product_state(sites, seed=42; nup=nothing, ndn=nothing)
-    rng = MersenneTwister(seed)
-    
+    return random_product_state(MersenneTwister(seed), sites; nup, ndn)
+end
+
+function random_product_state(rng::AbstractRNG, sites; nup=nothing, ndn=nothing)
     N = length(sites)
     if N == 0
         error("empty sites")

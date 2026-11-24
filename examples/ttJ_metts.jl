@@ -348,7 +348,7 @@ function main(; L::Int, W::Int, J::Float64, filling::Float64, t::Float64, t_prim
         println("DMRG warmup energy = $energy_dmrg")
 
         println("Sampling the post-DMRG wavefunction ...")
-        samp0 = collapse_with_qn!(psi, "Z")
+        samp0 = collapse_with_qn(psi, "Z")
         @show samp0
 
         new_state = [occ_to_label(samp0[j]) for j in 1:N]
@@ -370,7 +370,6 @@ function main(; L::Int, W::Int, J::Float64, filling::Float64, t::Float64, t_prim
         res = timeevo_tdvp_extend(
             H, psi_in, -(beta/2);
             tau            = tau,
-            normalize      = true,
             solver_backend = "applyexp",
             maxm           = maxD,
             kkrylov        = 2,
@@ -388,7 +387,7 @@ function main(; L::Int, W::Int, J::Float64, filling::Float64, t::Float64, t_prim
             psi = evolve_beta_half(psi, beta, H)
             @assert psi isa MPS "psi became $(typeof(psi)) after TDVP; expected MPS."
 
-            samp = collapse_with_qn!(psi, "X")
+            samp = collapse_with_qn(psi, "X")
             @show samp
 
             new_state = [occ_to_label(samp[j]) for j in 1:N]
@@ -479,7 +478,7 @@ function main(; L::Int, W::Int, J::Float64, filling::Float64, t::Float64, t_prim
             end
 
             # Collapse + store sample under measurement index meas
-            samp = collapse_with_qn!(psi, "X")
+            samp = collapse_with_qn(psi, "X")
             @show samp
 
             samples[meas] = samp

@@ -23,10 +23,8 @@ let
     tau0   = 0.05
     nsubdiv    = 4
     kkrylov    = 3
-    normalize  = true
     silent     = false
     solver_backend = "applyexp"
-    shift  = 0.
 
     ## outfile to dump measurements
     outfile = DumpFile(outfile_path)
@@ -76,8 +74,7 @@ let
             timeevo_tdvp_extend_measurements(
                 H, psi, beta_min/2, beta_max/2, beta_collapse/2, measure, collapse_func;
                 tau=tau, cutoff=cutoff, maxm=maxm, tau0=tau0, nsubdiv=nsubdiv,
-                kkrylov=kkrylov, normalize=normalize, silent=silent,
-                solver_backend=solver_backend, shift=shift)
+                kkrylov=kkrylov, silent=silent, solver_backend=solver_backend)
 
         if step == 1
             dump!(outfile, "betas", 2 .* times)
